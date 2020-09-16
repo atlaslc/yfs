@@ -2,16 +2,19 @@
 // Lock server tester
 //
 
-#include "lock_protocol.h"
-#include "lock_client.h"
-#include "rpc.h"
-#include "pwrapper.h"
 #include <arpa/inet.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
 #include <vector>
+#include "lock_client.h"
+#include "lock_protocol.h"
+#include "pwrapper.h"
+#include "rpc.h"
 
 int nt = 10;
 std::string dst;
-lock_client **lc = new lock_client * [nt];
+lock_client **lc = new lock_client *[nt];
 std::string a = std::string("a");
 std::string b = std::string("b");
 std::string c = std::string("c");
@@ -22,12 +25,10 @@ std::string c = std::string("c");
 int ct[256];
 pMutex count_mutex;
 
-void
-check_grant(std::string name)
-{
+void check_grant(std::string name) {
   count_mutex.lock();
   int x = name.c_str()[0] & 0xff;
-  if(ct[x] != 0){
+  if (ct[x] != 0) {
     fprintf(stderr, "error: server granted %s twice\n", name.c_str());
     fprintf(stdout, "error: server granted %s twice\n", name.c_str());
     count_mutex.unlock();
@@ -37,14 +38,11 @@ check_grant(std::string name)
   count_mutex.unlock();
 }
 
-void
-check_release(std::string name)
-{
+void check_release(std::string name) {
   count_mutex.lock();
   int x = name.c_str()[0] & 0xff;
-  if(ct[x] != 1){
-    fprintf(stderr, "error: client released un-held lock %s\n", 
-      name.c_str());
+  if (ct[x] != 1) {
+    fprintf(stderr, "error: client released un-held lock %s\n", name.c_str());
     count_mutex.unlock();
     exit(1);
   }
@@ -52,100 +50,94 @@ check_release(std::string name)
   count_mutex.unlock();
 }
 
-void
-test1(void)
-{
-    printf ("acquire a release a acquire a release a\n");
-    lc[0]->acquire(a);
-    check_grant(a);
-    lc[0]->release(a);
-    check_release(a);
-    lc[0]->acquire(a);
-    check_grant(a);
-    lc[0]->release(a);
-    check_release(a);
+void test1(void) {
+  printf("acquire a release a acquire a release a\n");
+  lc[0]->acquire(a);
+  check_grant(a);
+  lc[0]->release(a);
+  check_release(a);
+  lc[0]->acquire(a);
+  check_grant(a);
+  lc[0]->release(a);
+  check_release(a);
 
-    printf ("acquire a acquire b release b releasea \n");
-    lc[0]->acquire(a);
-    check_grant(a);
-    lc[0]->acquire(b);
-    check_grant(b);
-    lc[0]->release(b);
-    check_release(b);
-    lc[0]->release(a);
-    check_release(a);
+  printf("acquire a acquire b release b releasea \n");
+  lc[0]->acquire(a);
+  check_grant(a);
+  lc[0]->acquire(b);
+  check_grant(b);
+  lc[0]->release(b);
+  check_release(b);
+  lc[0]->release(a);
+  check_release(a);
 }
 
-void *
-test2(void *x) 
-{
-  int i = * (int *) x;
+void *test2(void *x) {
+  int i = *(int *)x;
 
-  printf ("test2: client %d acquire a release a\n", i);
+  printf("test2: client %d acquire a release a\n", i);
   lc[i]->acquire(a);
-  printf ("test2: client %d acquire done\n", i);
+  printf("test2: client %d acquire done\n", i);
   check_grant(a);
   sleep(1);
-  printf ("test2: client %d release\n", i);
+  printf("test2: client %d release\n", i);
   check_release(a);
   lc[i]->release(a);
-  printf ("test2: client %d release done\n", i);
+  printf("test2: client %d release done\n", i);
   return 0;
 }
 
-void *
-test3(void *x)
-{
-  int i = * (int *) x;
+void *test3(void *x) {
+  int i = *(int *)x;
 
-  printf ("test3: client %d acquire a release a concurrent\n", i);
+  printf("test3: client %d acquire a release a concurrent\n", i);
   for (int j = 0; j < 10; j++) {
     lc[i]->acquire(a);
     check_grant(a);
-    printf ("test3: client %d got lock\n", i);
+    printf("test3: client %d got lock\n", i);
     check_release(a);
     lc[i]->release(a);
   }
   return 0;
 }
 
-void *
-test4(void *x)
-{
-  int i = * (int *) x;
+void *test4(void *x) {
+  int i = *(int *)x;
 
-  printf ("test4: client %d acquire a release a concurrent; same clnt\n", i);
+  printf("test4: client %d acquire a release a concurrent; same clnt\n", i);
   for (int j = 0; j < 10; j++) {
     lc[0]->acquire(a);
     check_grant(a);
-    printf ("test4: client %d got lock\n", i);
+    printf("test4: client %d got lock\n", i);
     check_release(a);
     lc[0]->release(a);
   }
   return 0;
 }
 
-void *
-test5(void *x)
-{
-  int i = * (int *) x;
+void *test5(void *x) {
+  int i = *(int *)x;
 
-  printf ("test5: client %d acquire a release a concurrent; same and diff clnt\n", i);
+  printf(
+      "test5: client %d acquire a release a concurrent; same and diff clnt\n",
+      i);
   for (int j = 0; j < 10; j++) {
-    if (i < 5)  lc[0]->acquire(a);
-    else  lc[1]->acquire(a);
+    if (i < 5)
+      lc[0]->acquire(a);
+    else
+      lc[1]->acquire(a);
     check_grant(a);
-    printf ("test5: client %d got lock\n", i);
+    printf("test5: client %d got lock\n", i);
     check_release(a);
-    if (i < 5) lc[0]->release(a);
-    else lc[1]->release(a);
+    if (i < 5)
+      lc[0]->release(a);
+    else
+      lc[1]->release(a);
   }
   return 0;
 }
 
-int
-main(int argc, char *argv[])
-{
+int main(int argc, char *argv[]) {
   int r;
   pthread_t th[nt];
   int test = 0;
@@ -154,16 +146,16 @@ main(int argc, char *argv[])
   setvbuf(stderr, NULL, _IONBF, 0);
   srandom(getpid());
 
-  if(argc < 2) {
+  if (argc < 2) {
     fprintf(stderr, "Usage: %s [host:]port [test]\n", argv[0]);
     exit(1);
   }
 
-  dst = argv[1]; 
+  dst = argv[1];
 
   if (argc > 2) {
     test = atoi(argv[2]);
-    if(test < 1 || test > 5){
+    if (test < 1 || test > 5) {
       printf("Test number must be between 1 and 5\n");
       exit(1);
     }
@@ -172,65 +164,64 @@ main(int argc, char *argv[])
   printf("create %d lock client\n", nt);
   for (int i = 0; i < nt; i++) lc[i] = new lock_client(dst);
 
-  if(!test || test == 1){
+  if (!test || test == 1) {
     test1();
   }
 
-  if(!test || test == 2){
+  if (!test || test == 2) {
     // test2
     for (int i = 0; i < nt; i++) {
-      int *a = new int (i);
-      r = pthread_create(&th[i], NULL, test2, (void *) a);
-      assert (r == 0);
+      int *a = new int(i);
+      r = pthread_create(&th[i], NULL, test2, (void *)a);
+      assert(r == 0);
     }
     for (int i = 0; i < nt; i++) {
       pthread_join(th[i], NULL);
     }
   }
 
-  if(!test || test == 3){
+  if (!test || test == 3) {
     printf("test 3\n");
 
     // test3
     for (int i = 0; i < nt; i++) {
-      int *a = new int (i);
-      r = pthread_create(&th[i], NULL, test3, (void *) a);
-      assert (r == 0);
+      int *a = new int(i);
+      r = pthread_create(&th[i], NULL, test3, (void *)a);
+      assert(r == 0);
     }
     for (int i = 0; i < nt; i++) {
       pthread_join(th[i], NULL);
     }
   }
 
-  if(!test || test == 4){
+  if (!test || test == 4) {
     printf("test 4\n");
 
     // test 4
     for (int i = 0; i < 2; i++) {
-      int *a = new int (i);
-      r = pthread_create(&th[i], NULL, test4, (void *) a);
-      assert (r == 0);
+      int *a = new int(i);
+      r = pthread_create(&th[i], NULL, test4, (void *)a);
+      assert(r == 0);
     }
     for (int i = 0; i < 2; i++) {
       pthread_join(th[i], NULL);
     }
   }
 
-  if(!test || test == 5){
+  if (!test || test == 5) {
     printf("test 5\n");
 
     // test 5
 
     for (int i = 0; i < 10; i++) {
-      int *a = new int (i);
-      r = pthread_create(&th[i], NULL, test5, (void *) a);
-      assert (r == 0);
+      int *a = new int(i);
+      r = pthread_create(&th[i], NULL, test5, (void *)a);
+      assert(r == 0);
     }
     for (int i = 0; i < 10; i++) {
       pthread_join(th[i], NULL);
     }
   }
 
-  printf ("%s: passed all tests successfully\n", argv[0]);
-
+  printf("%s: passed all tests successfully\n", argv[0]);
 }

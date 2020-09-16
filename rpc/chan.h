@@ -6,11 +6,11 @@
 // simultaneously over a connection.
 // it uses TCP connections to get good wide-area performance, etc.
 
-#include <sys/types.h>
-#include <sys/socket.h>
 #include <netinet/in.h>
-#include <string>
+#include <sys/socket.h>
+#include <sys/types.h>
 #include <map>
+#include <string>
 #include "fifo.h"
 
 class tcpchan;
@@ -32,7 +32,7 @@ class schan {
   void recv(std::string &pdu, int &channo);
   void send(std::string pdu, int channo);
   void done(pthread_t myth);
-  void setlossy(int p=5) { lossy_percent = p; }
+  void setlossy(int p = 5) { lossy_percent = p; }
 
  private:
   int tcp;
@@ -49,18 +49,18 @@ class schan {
   // input queue. fed by a loop1() per tcpchan.
   // read & waited for by rpc's calls to recv().
   struct inbuf {
-  inbuf(std::string xs, int xchan) : s(xs), channo(xchan) { }
-    inbuf() { }
+    inbuf(std::string xs, int xchan) : s(xs), channo(xchan) {}
+    inbuf() {}
     std::string s;
     int channo;
   };
   fifo<inbuf> inq;
-  
+
   pthread_t th_tcp_loop;
   void tcp_loop();
   void tcp_loop1(int s);
   static void cleanup_tcp_loop1(void *arg) {
-    schan *sch = (schan *) arg;
+    schan *sch = (schan *)arg;
     sch->done(pthread_self());
   }
   void send_tcp(int channo, std::string pdu);
@@ -83,16 +83,17 @@ class cchan {
   bool setup(sockaddr_in dst);
   void tcp_loop();
   static void cleanup_tcp_loop(void *arg) {
-    cchan *cch = (cchan *) arg;
+    cchan *cch = (cchan *)arg;
     cch->done();
   }
+
  public:
   cchan(sockaddr_in _dst, bool _debug = false);
   ~cchan();
   void send(std::string pdu);
   std::string recv();
   void done();
-  void setlossy(int p=5) { lossy_percent = p;}
+  void setlossy(int p = 5) { lossy_percent = p; }
 };
 
 // internal. one tcp connection (client or server end).
@@ -100,6 +101,7 @@ class cchan {
 class tcpchan {
  private:
   bool debug;
+
  public:
   tcpchan(int sock, bool _debug = false);
   ~tcpchan();
@@ -114,7 +116,7 @@ class tcpchan {
  private:
   int s;
   pthread_t th;
-  bool isdead; // tell owning schan or cchan to stop using this tcpchan
+  bool isdead;  // tell owning schan or cchan to stop using this tcpchan
 
   fifo<std::string> outq;
 
